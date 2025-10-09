@@ -1,0 +1,12 @@
+# Prep toolchain (Developer PowerShell for VS 2022 x64)
+# & 'C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\VsDevCmd.bat' -arch=x64
+
+# Build Azure IoT C SDK artifacts once
+cmake -S lib/azure-iot-sdk-c -B build/azure-sdk -Duse_amqp=ON -Duse_http=ON -Dskip_samples=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -G "Ninja"
+cmake --build build/azure-sdk --config Release
+
+# Build Zig module (links against build/azure-sdk outputs)
+zig build
+
+# Alternatively, from PowerShell you can automate the VS env + CMake build:
+pwsh -File scripts/build-azure-sdk.ps1
