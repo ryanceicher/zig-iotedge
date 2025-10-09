@@ -2,6 +2,7 @@
 zig-out/
 .zig-cache/
 zig-cache/
+azure-sdk-out/
 
 # CMake/Ninja build directories generated in workspace
 build/

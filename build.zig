@@ -20,10 +20,13 @@ const azure_build_static_libs = [_]AzureLibEntry{
     .{ .rel_dir = "c-utility", .name = "aziotsharedutil" },
     .{ .rel_dir = "deps/parson", .name = "parson" },
     .{ .rel_dir = "deps/umock-c", .name = "umock_c" },
+    .{ .rel_dir = "deps/uhttp", .name = "uhttp" },
     .{ .rel_dir = "umqtt", .name = "umqtt" },
     .{ .rel_dir = "iothub_client", .name = "iothub_client" },
     .{ .rel_dir = "iothub_client", .name = "iothub_client_mqtt_transport" },
     .{ .rel_dir = "iothub_client", .name = "iothub_client_mqtt_ws_transport" },
+    .{ .rel_dir = "provisioning_client", .name = "prov_auth_client" },
+    .{ .rel_dir = "provisioning_client", .name = "hsm_security_client" },
 };
 
 const system_libs_windows = [_][]const u8{
@@ -36,7 +39,7 @@ const system_libs_windows = [_][]const u8{
     "schannel",
     "secur32",
     "user32",
-    "uuid",
+    "Rpcrt4",
     "winhttp",
     "ws2_32",
 };
@@ -95,11 +98,16 @@ const AzureConfig = struct {
             } else |_| {}
         }
 
-        if (build_root_opt) |build_root| {
-            if (target_os != .linux) {
-                @panic("azure-sdk-build-root is currently only supported for Linux targets");
+        const default_build_dir = "build/azure-sdk";
+        if (build_root_opt == null) {
+            if (std.fs.cwd().openDir(default_build_dir, .{}) catch null) |dir_val| {
+                var dir = dir_val;
+                defer dir.close();
+                build_root_opt = default_build_dir;
             }
+        }
 
+        if (build_root_opt) |build_root| {
             var source_root_opt = b.option([]const u8, "azure-sdk-source-root", "Path to the azure-iot-sdk-c source directory");
             if (source_root_opt == null) {
                 if (std.process.getEnvVarOwned(b.allocator, "AZURE_IOT_SDK_SOURCE_DIR")) |env| {
@@ -109,15 +117,31 @@ const AzureConfig = struct {
 
             const source_root = source_root_opt orelse "lib/azure-iot-sdk-c";
 
+            const lib_suffix = switch (target_os) {
+                .windows => ".lib",
+                else => ".a",
+            };
+
+            const lib_prefix = switch (target_os) {
+                .windows => "",
+                else => "lib",
+            };
+
+            const system_libs = switch (target_os) {
+                .windows => system_libs_windows[0..],
+                .linux => system_libs_linux[0..],
+                else => @panic("Azure IoT SDK linking is only configured for Windows and Linux targets"),
+            };
+
             return .{
                 .kind = .azure_build,
                 .source_root = source_root,
                 .include_root = source_root,
                 .lib_root = build_root,
                 .debug_lib_root = build_root,
-                .lib_prefix = "lib",
-                .lib_suffix = ".a",
-                .system_libs = system_libs_linux[0..],
+                .lib_prefix = lib_prefix,
+                .lib_suffix = lib_suffix,
+                .system_libs = system_libs,
             };
         }
 
