@@ -27,30 +27,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Stage to build azure-iot-sdk-c static libraries
-FROM base AS azure-sdk-build
-
-WORKDIR /work
-
-# Copy the azure-iot-sdk-c source tree into the container
-COPY lib/azure-iot-sdk-c ./azure-iot-sdk-c
-
-# Configure and build with Ninja. Disable unnecessary components to speed up build.
-RUN cmake \
-        -S azure-iot-sdk-c \
-        -B build/azure-sdk \
-        -G Ninja \
-        -Duse_amqp=OFF \
-        -Duse_http=OFF \
-        -Duse_prov_client=OFF \
-        -Dbuild_service_client=OFF \
-        -Duse_edge_modules=ON \
-        -Dskip_samples=ON \
-        -Drun_unittests=OFF \
-        -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build build/azure-sdk --config Release
-
-# Stage to build Zig application
-FROM azure-sdk-build AS zig-build
+FROM base AS zig-build
 
 WORKDIR /work
 
@@ -65,25 +42,14 @@ RUN wget -q https://ziglang.org/download/${ZIG_VERSION}/${ZIG_ARCHIVE} && \
     rm ${ZIG_ARCHIVE}
 
 # Copy project sources
-COPY build.zig build.zig
-COPY build.zig.zon build.zig.zon
-COPY src ./src
+COPY . .
 
-# Copy azure build output for linking
-COPY --from=azure-sdk-build /work/build/azure-sdk ./azure-sdk-build-output
-COPY --from=azure-sdk-build /work/azure-iot-sdk-c ./lib/azure-iot-sdk-c
+ENV ZIG_GLOBAL_CACHE_DIR=/work/.zig-global-cache \
+    ZIG_LOCAL_CACHE_DIR=/work/.zig-cache
 
-# Build Zig project (target Linux as container environment)
-RUN zig build \
-        -Dazure-sdk-build-root=azure-sdk-build-output \
-        -Dazure-sdk-source-root=lib/azure-iot-sdk-c \
-        --summary all
-
-# Final stage publishes both azure artifacts and zig build outputs
-FROM scratch AS artifacts
-
-COPY --from=azure-sdk-build /work/build/azure-sdk /azure-sdk
-COPY --from=zig-build /work/zig-out /zig
+# Fetch dependencies and build Zig project (target Linux as container environment)
+RUN zig build --fetch && \
+    zig build -Doptimize=ReleaseSafe
 
 FROM ubuntu:24.04 AS runtime
 

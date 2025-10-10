@@ -1,18 +1,7 @@
 const std = @import("std");
-
-const azure = @cImport({
-    @cDefine("USE_EDGE_MODULES", "1");
-    @cInclude("azure_macro_utils/macro_utils.h");
-    @cInclude("umock_c/umock_c_prod.h");
-    @cInclude("azure_c_shared_utility/platform.h");
-    @cInclude("azure_c_shared_utility/threadapi.h");
-    @cInclude("azure_c_shared_utility/tickcounter.h");
-    @cInclude("azure_c_shared_utility/xlogging.h");
-    @cInclude("iothub.h");
-    @cInclude("iothub_module_client.h");
-    @cInclude("iothubtransportmqtt.h");
-    @cInclude("iothub_client_options.h");
-});
+const sdk = @import("azure_iot_sdk_c");
+const azure = sdk.iothub;
+const shared = sdk.shared_util;
 
 // Internal C bindings are intentionally not re-exported. Consumers should use
 // the Zig-first API below so they don't deal with C strings/pointers.
@@ -72,7 +61,7 @@ pub const ModuleClient = struct {
     }
 
     pub fn setDoWorkFrequencyMs(self: *ModuleClient, ms: u32) IoTError!void {
-        var temp: azure.tickcounter_ms_t = @intCast(ms);
+        var temp: shared.tickcounter_ms_t = @intCast(ms);
         if (azure.IoTHubModuleClient_SetOption(self.handle, azure.OPTION_DO_WORK_FREQUENCY_IN_MS, &temp) != azure.IOTHUB_CLIENT_OK) {
             return IoTError.SetOptionFailed;
         }
@@ -202,7 +191,7 @@ pub fn createModuleClientFromEnvironment() IoTError!ModuleClient {
 }
 
 pub fn sleepMilliseconds(duration_ms: u32) void {
-    _ = azure.ThreadAPI_Sleep(duration_ms);
+    _ = shared.ThreadAPI_Sleep(duration_ms);
 }
 
 /// Parse JSON from a C pointer + size into a caller-specified type T using std.json.parseFromSlice.
