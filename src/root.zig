@@ -223,3 +223,5 @@ pub fn parseJson(comptime T: type, bytes: []const u8) !struct {
     const parsed = try std.json.parseFromSlice(T, alloc, bytes, .{});
     return .{ .value = parsed.value, .arena = arena };
 }
+
+// No twin-specific helpers for now; consumers should parse envelopes directly.

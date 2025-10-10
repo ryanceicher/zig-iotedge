@@ -1,51 +1,43 @@
 const std = @import("std");
 const zig_iotedge = @import("zig_iotedge");
 
-const Options = struct {
-    option1: bool = false,
-    option2: []const u8 = "",
-    option3: i32 = 0,
+const TwinEnvelope = struct {
+    desired: struct {
+        @"$version": i64 = 0,
+        option1: bool = false,
+        option2: []const u8 = "",
+        option3: i32 = 0,
+    } = .{},
+    reported: struct {
+        @"$version": i64 = 0,
+    } = .{},
 };
-
-fn logOptions(prefix: []const u8, payload: []const u8) void {
-    var parsed = zig_iotedge.parseJson(Options, payload) catch |err| {
-        std.debug.print("{s}: failed to parse options ({s})\n", .{ prefix, @errorName(err) });
-        return;
-    };
-    defer parsed.deinit();
-    const opts = parsed.value;
-    std.debug.print("{s}: Option1={any}, Option2=\"{s}\", Option3={d}\n", .{ prefix, opts.option1, opts.option2, opts.option3 });
-}
 
 fn twinHandlerEx(client: *zig_iotedge.ModuleClient, kind: zig_iotedge.TwinUpdateKind, bytes: []const u8) void {
     const prefix = switch (kind) {
         .complete => "Twin snapshot",
         .partial => "Twin update",
     };
-    logOptions(prefix, bytes);
-
-    // Try to extract desired.$version if present for ack
-    const DesiredEnvelope = struct {
-        properties: ?struct { desired: ?struct { @"$version": ?i64 = null } = null } = null,
-        desired: ?struct { @"$version": ?i64 = null } = null,
-    };
-    var parsed = zig_iotedge.parseJson(DesiredEnvelope, bytes) catch {
+    var parsed = zig_iotedge.parseJson(TwinEnvelope, bytes) catch |err| {
+        std.debug.print("{s}: raw twin payload = {s}\n", .{ prefix, bytes });
+        std.debug.print("{s}: failed to parse twin payload ({s})\n", .{ prefix, @errorName(err) });
         return;
     };
     defer parsed.deinit();
 
-    var version_opt: ?i64 = null;
-    if (parsed.value.properties) |p| {
-        if (p.desired) |d| version_opt = d.@"$version";
-    }
-    if (version_opt == null) {
-        if (parsed.value.desired) |d2| version_opt = d2.@"$version";
-    }
-    if (version_opt) |ver| {
+    const envelope = parsed.value;
+    const desired = envelope.desired;
+    std.debug.print(
+        "{s}: Option1={any}, Option2=\"{s}\", Option3={d} (desired.$version={d})\n",
+        .{ prefix, desired.option1, desired.option2, desired.option3, desired.@"$version" },
+    );
+
+    const version = desired.@"$version";
+    if (version > 0) {
         // Compose a minimal reported state ack
         var buf: [128]u8 = undefined;
         const ts_ms: u64 = @intCast(std.time.milliTimestamp());
-        const json = std.fmt.bufPrint(&buf, "{{\"lastAckVersion\":{d},\"ackTimestampMs\":{d}}}", .{ ver, ts_ms }) catch return;
+        const json = std.fmt.bufPrint(&buf, "{{\"lastAckVersion\":{d},\"ackTimestampMs\":{d}}}", .{ version, ts_ms }) catch return;
         _ = client.sendReportedState(json, null) catch |err| {
             std.debug.print("Failed to send reported state ack ({s}).\n", .{@errorName(err)});
             return;

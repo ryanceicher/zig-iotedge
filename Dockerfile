@@ -48,8 +48,8 @@ ENV ZIG_GLOBAL_CACHE_DIR=/work/.zig-global-cache \
     ZIG_LOCAL_CACHE_DIR=/work/.zig-cache
 
 # Fetch dependencies and build Zig project (target Linux as container environment)
-RUN zig build --fetch && \
-    zig build -Doptimize=ReleaseSafe
+RUN zig build --fetch -Dcpu=baseline && \
+    zig build -Doptimize=ReleaseSafe -Dcpu=baseline
 
 FROM ubuntu:24.04 AS runtime
 
@@ -63,5 +63,9 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=zig-build /work/zig-out/bin/zig_iotedge /usr/local/bin/zig_iotedge
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
-ENTRYPOINT ["/usr/local/bin/zig_iotedge"]
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["run"]
