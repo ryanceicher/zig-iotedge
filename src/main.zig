@@ -1,5 +1,6 @@
 const std = @import("std");
 const zig_iotedge = @import("zig_iotedge");
+const nats = @import("nats");
 
 const TwinEnvelope = struct {
     desired: struct {
@@ -51,13 +52,35 @@ fn connectionStatusHandler(status: zig_iotedge.ConnectionStatus, reason_code: u3
         .unauthenticated => "unauthenticated",
         .unknown => "unknown",
     };
+    
     std.debug.print("Connection status update: {s} (reason={d})\n", .{ desc, reason_code });
 }
 
-fn keepAliveLoop() noreturn {
+fn keepAliveLoop() void {
     while (true) {
+        // Create a NATS jetstream connection
+        const connectionOptions = nats.ConnectionOptions.create() catch {
+            return;
+        };
+        const connection = nats.Connection.connect(connectionOptions) catch {
+            return;
+        };
+        defer connection.close();
+        defer connection.destroy();
+
+        var userdataPtr = false;
+        _ = connection.subscribe(*bool, "shit", callback, &userdataPtr) catch {
+            return;
+        };
+
         zig_iotedge.sleepMilliseconds(1000);
     }
+}
+
+fn callback(_: *bool, _: *nats.Connection, _: *nats.Subscription, msg: *nats.Message) void {
+    const subject = msg.getSubject();
+    const data = msg.getData() orelse "";
+    std.debug.print("Received a message on subject {s}: {s}\n", .{ subject, data });
 }
 
 pub fn main() !void {

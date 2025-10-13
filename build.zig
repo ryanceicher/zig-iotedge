@@ -12,11 +12,24 @@ pub fn build(b: *std.Build) void {
     });
     const azure_module = azure_dep.module("azure_iot_sdk_c");
 
+    const nats_dep = b.dependency("nats_client", .{
+        .target = target,
+        .optimize = optimize,
+        .@"enable-libsodium" = true,
+        .@"enable-tls" = true,
+        .@"force-host-verify" = true,
+        .@"enable-streaming" = true,
+    });
+    const nats_module = nats_dep.module("nats");
+
     const zig_module = b.addModule("zig_iotedge", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
-        .imports = &.{.{ .name = "azure_iot_sdk_c", .module = azure_module }},
+        .imports = &.{
+            .{ .name = "azure_iot_sdk_c", .module = azure_module },
+            .{ .name = "nats", .module = nats_module },
+        },
     });
 
     const exe_root = b.createModule(.{
@@ -26,6 +39,7 @@ pub fn build(b: *std.Build) void {
         .imports = &.{
             .{ .name = "zig_iotedge", .module = zig_module },
             .{ .name = "azure_iot_sdk_c", .module = azure_module },
+            .{ .name = "nats", .module = nats_module },
         },
     });
 
@@ -33,6 +47,7 @@ pub fn build(b: *std.Build) void {
         .name = "zig_iotedge",
         .root_module = exe_root,
     });
+
     exe.linkLibC();
     b.installArtifact(exe);
 
