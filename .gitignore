@@ -1,15 +1,6 @@
 # Zig build outputs
 zig-out/
 .zig-cache/
-zig-cache/
-azure-sdk-out/
-
-# CMake/Ninja build directories generated in workspace
-build/
-azure-sdk-build-output/
-
-# Azure IoT SDK source tree (handled outside of git)
-lib/azure-iot-sdk-c/
 
 # Editor settings
 .vscode/
@@ -17,6 +8,4 @@ lib/azure-iot-sdk-c/
 # Local NATS JetStream data
 nats-data/
 
-# OS cruft
-Thumbs.db
-.DS_Store
+todo.md
