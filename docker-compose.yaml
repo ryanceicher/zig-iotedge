@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  nats:
+    image: nats:2.10-alpine
+    container_name: nats-dev
+    command: ["-js", "-c", "/etc/nats/nats.conf"]
+    ports:
+      - "4222:4222"   # client
+      - "6222:6222"   # cluster (not used but exposed for completeness)
+      - "8222:8222"   # monitoring
+    volumes:
+      - ./nats.conf:/etc/nats/nats.conf:ro
+      - ./nats-data:/data
+    restart: unless-stopped
+
+  nats-box:
+    image: synadia/nats-box:latest
+    container_name: nats-box
+    depends_on:
+      - nats
+    environment:
+      NATS_URL: nats://nats:4222
+    entrypoint: ["/bin/sh","-c","sleep infinity"]
+    # Handy shell with nats CLI installed:
+    # docker exec -it nats-box sh
+
+volumes: {}
