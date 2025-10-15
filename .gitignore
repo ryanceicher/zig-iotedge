@@ -14,6 +14,9 @@ lib/azure-iot-sdk-c/
 # Editor settings
 .vscode/
 
+# Local NATS JetStream data
+nats-data/
+
 # OS cruft
 Thumbs.db
 .DS_Store

@@ -17,7 +17,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .@"enable-libsodium" = true,
         .@"enable-tls" = true,
-        .@"force-host-verify" = true,
+        .@"force-host-verify" = false,
         .@"enable-streaming" = true,
     });
     const nats_module = nats_dep.module("nats");

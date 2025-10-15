@@ -37,8 +37,8 @@
             .hash = "azure_iot_sdk_c-0.1.0-5kPd0n2jmQFIo2ZjrgYqTGRlrXN1YZyuOU9axTo7D_b1",
         },
         .nats_client = .{
-            .url = "git+https://github.com/ryanceicher/nats-client.git#3efa60448c8af0d641a12ac917081d0696076677",
-            .hash = "nats_client-0.1.0-htArLGVmAQBEJ5NRtA_nRfO3n2GOHGELfs-JOYhYvhKb",
+            .url = "git+https://github.com/ryanceicher/nats-client.git#751515a9fd94751174550db2608d68c3837b280f",
+            .hash = "nats_client-0.1.0-htArLGnaAgCwC-DUHFfa3mwnmuvHCj5BjQI5pmy_NwAX",
         },
     },
     .paths = .{
